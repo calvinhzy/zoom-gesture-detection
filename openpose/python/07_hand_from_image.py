@@ -12,15 +12,23 @@ from sklearn.model_selection import KFold
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import plot_confusion_matrix
 import matplotlib.pyplot as plt
+import torch
+import torch.nn as nn
+from torch.nn.utils.rnn import *
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.utils import data
 from joblib import dump, load
 
 model_name = 'model.sav'
 
 gestures = ['thumbs_up', 'thumbs_down', 'pause', 'cross', 'ok_sign', 'raise_hand', 'no_gesture']
+num_classes = len(gestures)
 
 confidence_threshold = 0.3
 num_points = 42
 percent_points_confident = 0.4
+
 
 def format_input(X):
 	formatted_X = np.concatenate((X[0].flatten(), X[1].flatten()))
@@ -38,8 +46,8 @@ def preprocess(X):
 	processed_X = np.array(processed_X)
 	return processed_X
 
+loaded_clf = load(model_name)
 def predict(X):
-    loaded_clf = load(model_name)
     formatted_X = format_input(X)
     processed_X = preprocess(formatted_X)
     if (len(processed_X)==0):
@@ -48,6 +56,50 @@ def predict(X):
       pred = loaded_clf.predict(processed_X)
       print(gestures[int(pred)])
 
+
+class Model(nn.Module):
+
+	def __init__(self):
+		super(Model, self).__init__()
+		self.linear1 = nn.Linear(42 * 3, 200)
+		self.linear2 = nn.Linear(200, 100)
+		self.linear3 = nn.Linear(100, num_classes)
+		self.relu = torch.nn.ReLU()
+
+	def forward(self, input_seq):
+		x = self.linear1(input_seq)
+		x = self.relu(x)
+		x = self.linear2(x)
+		x = self.relu(x)
+		x = self.linear3(x)
+		return x
+
+model_path = 'model.pt'
+cuda = torch.cuda.is_available()
+device = torch.device("cuda" if cuda else "cpu")
+model = Model()
+loss_function = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters())
+checkpoint = torch.load(model_path)
+model.load_state_dict(checkpoint['model_state_dict'])
+model = model.double()
+model.to(device)
+
+def predictWithDeepLearning(X):
+	formatted_X = format_input(X)
+	processed_X = preprocess(formatted_X)
+	if (len(processed_X) == 0):
+		print('no_guesture')
+	else:
+		processed_X = torch.from_numpy(processed_X).double()
+		processed_X = processed_X.to(device)
+		y_pred = model(processed_X)
+		_, predicted = torch.max(y_pred.data, 1)
+		# print(predicted)
+		print(gestures[int(predicted)])
+
+
+
 try:
 	# Import Openpose (Windows/Ubuntu/OSX)
 	dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -55,7 +107,6 @@ try:
 		# Change these variables to point to the correct folder (Release/x64 etc.)
 		sys.path.append(dir_path + '/../bin/python/openpose/Release');
 		os.environ['PATH'] = os.environ['PATH'] + ';' + dir_path + '/../x64/Release;' + dir_path + '/../bin;'
-		print(os.environ['PATH'])
 		import pyopenpose as op
 	except ImportError as e:
 		print(
@@ -150,7 +201,7 @@ try:
 			capturing = True
 			# SPACE pressed
 			#         # Create new datum
-		if capturing:
+		# if capturing:
 			datum = op.Datum()
 			datum.cvInputData = frame
 			datum.handRectangles = handRectangles
@@ -164,6 +215,7 @@ try:
 			# print("Right hand keypoints: \n" + str(datum.handKeypoints[1]))
 
 			predict(datum.handKeypoints)
+			# predictWithDeepLearning(datum.handKeypoints)
 
 			cv2.imshow("OpenPose 1.7.0 - Tutorial Python API", datum.cvOutputData)
 
