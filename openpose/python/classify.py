@@ -34,17 +34,43 @@ def preprocess(X, Y):
 	processed_X, processed_Y = [], []
 	for i, x in enumerate(X):
 		if gestures[int(Y[i])] == 'no_gesture':
-			processed_X.append(x)
+			processed_X.append([a for j,a in enumerate(x) if (j-2)%3!=0])
 			processed_Y.append(Y[i])
 			continue
 		confidences = x[2::3]
 		if np.count_nonzero(confidences > confidence_threshold) > percent_points_confident * num_points:
-			processed_X.append(x)
+			# print(np.array([a for j,a in enumerate(x) if (j-2)%3!=0]).shape)
+			# print(np.array(x).shape)
+			processed_X.append([a for j,a in enumerate(x) if (j-2)%3!=0])
+			# processed_X.append(x)
 			processed_Y.append(Y[i])
 	processed_X = np.array(processed_X)
 	processed_Y = np.array(processed_Y)
 	return processed_X, processed_Y
 
+def feature_selection(X,Y):
+	processed_X, processed_Y = [], []
+	for i, x in enumerate(X):
+		#get each edge segment vector:
+		curr = []
+		for ii in range(2):
+			for j in range(5):
+				for k in range(1,5):
+					if k==1:
+						# print((ii*21+j*4+k)*2, (ii*21)*2)
+						# print((ii*21+j*4+k)*2+1, (ii*21)*2+1)
+						curr.append(x[(ii*21+j*4+k)*2] - x[(ii*21)*2])  # x
+						curr.append(x[(ii*21+j*4+k)*2+1] - x[(ii*21)*2+1])  # y
+					else:
+						# print((ii * 21 + j * 4 + k) * 2, (ii*21+j*4+k-1)*2)
+						# print((ii * 21 + j * 4 + k) * 2 + 1, (ii*21+j*4+k-1)*2+ 1)
+						curr.append(x[(ii * 21 + j * 4 + k) * 2]-x[(ii*21+j*4+k-1)*2]) #x
+						curr.append(x[(ii * 21 + j * 4 + k) * 2 + 1] - x[(ii*21+j*4+k-1)*2+ 1]) #y
+		processed_X.append(x)
+		processed_Y.append(Y[i])
+	processed_X = np.array(processed_X)
+	processed_Y = np.array(processed_Y)
+	return processed_X, processed_Y
 
 def testPerformance(clf, X, Y, cv):
 	# print(X.shape)
@@ -174,6 +200,7 @@ def train():
 	print(Y.shape)
 
 	X_array, Y_array = preprocess(X, Y)
+	X_array, Y_array = feature_selection(X_array, Y_array)
 	# X_array, Y_array = np.array(X), np.array(Y)
 	print(X_array.shape)
 	print(Y_array.shape)
@@ -184,17 +211,17 @@ def train():
 	# clf = KNeighborsClassifier(n_neighbors=2) # also 100% accuracy
 	# clf = SVC(kernel='linear') # also 100% accuracy
 	# testRandomForest(cv, X_array, Y_array)
-	# clf = RandomForestClassifier(max_depth=7, random_state=0) # also 100% accuracy
-
-	clf = MLPClassifier(solver='adam', alpha=1e-5,
-	hidden_layer_sizes = (100), random_state = 1) # ok performance
+	clf = RandomForestClassifier(max_depth=7, random_state=0) # also 100% accuracy
+	#
+	# clf = MLPClassifier(solver='adam', alpha=1e-5,
+	# hidden_layer_sizes = (100), random_state = 1) # ok performance
 
 
 	testPerformance(clf, X_array, Y_array, cv)
 	plotTraining(clf, X_array, Y_array)
 
 
-	# dump(clf, model_name)
+	dump(clf, model_name)
 
 
 

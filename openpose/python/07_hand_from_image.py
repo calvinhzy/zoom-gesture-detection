@@ -42,7 +42,30 @@ def preprocess(X):
 	for i, x in enumerate(X):
 		confidences = x[2::3]
 		if np.count_nonzero(confidences > confidence_threshold) > percent_points_confident * num_points:
-			processed_X.append(x)
+			# processed_X.append(x)
+			processed_X.append([a for j,a in enumerate(x) if (j-2)%3!=0])
+	processed_X = np.array(processed_X)
+	return processed_X
+
+def feature_selection(X):
+	processed_X = []
+	for i, x in enumerate(X):
+		#get each edge segment vector:
+		curr = []
+		for ii in range(2):
+			for j in range(5):
+				for k in range(1,5):
+					if k==1:
+						# print((ii*21+j*4+k)*2, (ii*21)*2)
+						# print((ii*21+j*4+k)*2+1, (ii*21)*2+1)
+						curr.append(x[(ii*21+j*4+k)*2] - x[(ii*21)*2])  # x
+						curr.append(x[(ii*21+j*4+k)*2+1] - x[(ii*21)*2+1])  # y
+					else:
+						# print((ii * 21 + j * 4 + k) * 2, (ii*21+j*4+k-1)*2)
+						# print((ii * 21 + j * 4 + k) * 2 + 1, (ii*21+j*4+k-1)*2+ 1)
+						curr.append(x[(ii * 21 + j * 4 + k) * 2]-x[(ii*21+j*4+k-1)*2]) #x
+						curr.append(x[(ii * 21 + j * 4 + k) * 2 + 1] - x[(ii*21+j*4+k-1)*2+ 1]) #y
+		processed_X.append(x)
 	processed_X = np.array(processed_X)
 	return processed_X
 
@@ -50,8 +73,9 @@ loaded_clf = load(model_name)
 def predict(X):
     formatted_X = format_input(X)
     processed_X = preprocess(formatted_X)
+    processed_X = feature_selection(processed_X)
     if (len(processed_X)==0):
-	    print('no_guesture')
+	    print('no_gesture')
     else:
       pred = loaded_clf.predict(processed_X)
       print(gestures[int(pred)])
@@ -89,7 +113,7 @@ def predictWithDeepLearning(X):
 	formatted_X = format_input(X)
 	processed_X = preprocess(formatted_X)
 	if (len(processed_X) == 0):
-		print('no_guesture')
+		print('no_gesture')
 	else:
 		processed_X = torch.from_numpy(processed_X).double()
 		processed_X = processed_X.to(device)
@@ -156,8 +180,9 @@ try:
 	print(imageToProcess.shape)
 	handRectangles = [
 		# Left/Right hands person 0
-		[op.Rectangle(160, 160, 480, 480), op.Rectangle(0., 160., 480, 480)]
+		# [op.Rectangle(160, 160, 480, 480), op.Rectangle(0., 160., 480, 480)]
 		# [op.Rectangle(0, 0, 480, 480), op.Rectangle(160., 0, 480, 480)]
+		[op.Rectangle(160, 0, 480, 480), op.Rectangle(0, 0, 480, 480)]
 		# [
 		#     op.Rectangle(320.035889, 377.675049, 69.300949, 69.300949),
 		#     op.Rectangle(0., 0., 0., 0.),
