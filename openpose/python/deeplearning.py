@@ -17,6 +17,7 @@ from torch.utils import data
 
 confidence_threshold = 0.3
 num_points = 42
+feature_per_point = 2
 percent_points_confident = 0.4
 
 
@@ -37,12 +38,15 @@ def preprocess(X, Y):
 	processed_X, processed_Y = [], []
 	for i, x in enumerate(X):
 		if gestures[int(Y[i])] == 'no_gesture':
-			processed_X.append(x)
+			processed_X.append([a for j,a in enumerate(x) if (j-2)%3!=0])
 			processed_Y.append(Y[i])
 			continue
 		confidences = x[2::3]
 		if np.count_nonzero(confidences > confidence_threshold) > percent_points_confident * num_points:
-			processed_X.append(x)
+			# print(np.array([a for j,a in enumerate(x) if (j-2)%3!=0]).shape)
+			# print(np.array(x).shape)
+			processed_X.append([a for j,a in enumerate(x) if (j-2)%3!=0])
+			# processed_X.append(x)
 			processed_Y.append(Y[i])
 	processed_X = np.array(processed_X)
 	processed_Y = np.array(processed_Y)
@@ -101,7 +105,7 @@ def train():
 
 		def __init__(self):
 			super(Model, self).__init__()
-			self.linear1 = nn.Linear(42*3, 200)
+			self.linear1 = nn.Linear(num_points*feature_per_point, 200)
 			self.linear2 = nn.Linear(200, 100)
 			self.linear3 = nn.Linear(100, num_classes)
 			self.relu = torch.nn.ReLU()

@@ -27,6 +27,7 @@ num_classes = len(gestures)
 
 confidence_threshold = 0.3
 num_points = 42
+feature_per_point = 2
 percent_points_confident = 0.4
 
 
@@ -50,22 +51,59 @@ def preprocess(X):
 def feature_selection(X):
 	processed_X = []
 	for i, x in enumerate(X):
-		#get each edge segment vector:
-		curr = []
+
+		# curr = []
+		curr = [a for a in x]
+		# get each edge segment vector:
 		for ii in range(2):
 			for j in range(5):
 				for k in range(1,5):
-					if k==1:
-						# print((ii*21+j*4+k)*2, (ii*21)*2)
-						# print((ii*21+j*4+k)*2+1, (ii*21)*2+1)
-						curr.append(x[(ii*21+j*4+k)*2] - x[(ii*21)*2])  # x
-						curr.append(x[(ii*21+j*4+k)*2+1] - x[(ii*21)*2+1])  # y
+					if k == 1:
+						index_x_1 = (ii * 21 + j * 4 + k) * 2
+						index_x_2 = (ii * 21) * 2
+						index_y_1 = (ii * 21 + j * 4 + k) * 2 + 1
+						index_y_2 = (ii * 21) * 2 + 1
+						# print(index_x_1, index_x_2)
+						# print(index_y_1,index_y_2)
+						curr.append(x[index_x_1] - x[index_x_2])  # x
+						curr.append(x[index_y_1] - x[index_y_2])  # y
 					else:
-						# print((ii * 21 + j * 4 + k) * 2, (ii*21+j*4+k-1)*2)
-						# print((ii * 21 + j * 4 + k) * 2 + 1, (ii*21+j*4+k-1)*2+ 1)
-						curr.append(x[(ii * 21 + j * 4 + k) * 2]-x[(ii*21+j*4+k-1)*2]) #x
-						curr.append(x[(ii * 21 + j * 4 + k) * 2 + 1] - x[(ii*21+j*4+k-1)*2+ 1]) #y
-		processed_X.append(x)
+						index_x_1 = (ii * 21 + j * 4 + k) * 2
+						index_x_2 = (ii * 21 + j * 4 + k - 1) * 2
+						index_y_1 = (ii * 21 + j * 4 + k) * 2 + 1
+						index_y_2 = (ii * 21 + j * 4 + k - 1) * 2 + 1
+						# print(index_x_1, index_x_2)
+						# print(index_y_1,index_y_2)
+						curr.append(x[index_x_1] - x[index_x_2])  # x
+						curr.append(x[index_y_1] - x[index_y_2])  # y
+
+		# manual feature selection
+		# distance btw finger tips to palm
+		curr.append((x[16] - x[10]) ** 2 + (x[17] - x[11]) ** 2)
+		curr.append((x[24] - x[18]) ** 2 + (x[25] - x[19]) ** 2)
+		curr.append((x[32] - x[26]) ** 2 + (x[33] - x[27]) ** 2)
+		curr.append((x[40] - x[34]) ** 2 + (x[41] - x[35]) ** 2)
+
+		curr.append((x[42 + 16] - x[42 + 10]) ** 2 + (x[42 + 17] - x[42 + 11]) ** 2)
+		curr.append((x[42 + 24] - x[42 + 18]) ** 2 + (x[42 + 25] - x[42 + 19]) ** 2)
+		curr.append((x[42 + 32] - x[42 + 26]) ** 2 + (x[42 + 33] - x[42 + 27]) ** 2)
+		curr.append((x[42 + 40] - x[42 + 34]) ** 2 + (x[42 + 41] - x[42 + 35]) ** 2)
+
+		# distance btw thumb with index finger
+		curr.append((x[16] - x[8]) ** 2 + (x[17] - x[9]) ** 2)
+		curr.append((x[14] - x[6]) ** 2 + (x[15] - x[7]) ** 2)
+
+		curr.append((x[42 + 16] - x[42 + 8]) ** 2 + (x[42 + 17] - x[42 + 9]) ** 2)
+		curr.append((x[42 + 14] - x[42 + 6]) ** 2 + (x[42 + 15] - x[42 + 7]) ** 2)
+
+		# highest point
+		curr.append(np.argmax(x[1::2]))
+		# lowest point
+		curr.append(np.argmin(x[1::2]))
+
+
+		# curr = x
+		processed_X.append(curr)
 	processed_X = np.array(processed_X)
 	return processed_X
 
@@ -74,6 +112,7 @@ def predict(X):
     formatted_X = format_input(X)
     processed_X = preprocess(formatted_X)
     processed_X = feature_selection(processed_X)
+    print(processed_X.shape)
     if (len(processed_X)==0):
 	    print('no_gesture')
     else:
@@ -85,7 +124,7 @@ class Model(nn.Module):
 
 	def __init__(self):
 		super(Model, self).__init__()
-		self.linear1 = nn.Linear(42 * 3, 200)
+		self.linear1 = nn.Linear(num_points*feature_per_point, 200)
 		self.linear2 = nn.Linear(200, 100)
 		self.linear3 = nn.Linear(100, num_classes)
 		self.relu = torch.nn.ReLU()
@@ -180,9 +219,9 @@ try:
 	print(imageToProcess.shape)
 	handRectangles = [
 		# Left/Right hands person 0
-		# [op.Rectangle(160, 160, 480, 480), op.Rectangle(0., 160., 480, 480)]
+		[op.Rectangle(160, 160, 480, 480), op.Rectangle(0., 160., 480, 480)]
 		# [op.Rectangle(0, 0, 480, 480), op.Rectangle(160., 0, 480, 480)]
-		[op.Rectangle(160, 0, 480, 480), op.Rectangle(0, 0, 480, 480)]
+		# [op.Rectangle(160, 0, 480, 480), op.Rectangle(0, 0, 480, 480)]
 		# [
 		#     op.Rectangle(320.035889, 377.675049, 69.300949, 69.300949),
 		#     op.Rectangle(0., 0., 0., 0.),
