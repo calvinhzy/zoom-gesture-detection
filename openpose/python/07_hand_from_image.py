@@ -54,6 +54,25 @@ def preprocess(X):
 				else:
 					curr.append(0)
 					curr.append(0)
+
+			# normalization
+			x_mean_l = np.mean(curr[:42:2])
+			x_std_l = np.std(curr[:42:2])
+			y_mean_l = np.mean(curr[1:43:2])
+			y_std_l = np.std(curr[1:43:2])
+			x_mean_r = np.mean(curr[42::2])
+			x_std_r = np.std(curr[42::2])
+			y_mean_r = np.mean(curr[43::2])
+			y_std_r = np.std(curr[43::2])
+			# print(x_mean_l,y_mean_l,x_mean_r,y_mean_r)
+			for kk in range(0, 42, 2):
+				curr[kk] = (curr[kk] - x_mean_l) / x_std_l if x_std_l != 0 else curr[kk]
+			for kk in range(1, 43, 2):
+				curr[kk] = (curr[kk] - y_mean_l) / y_std_l if y_std_l != 0 else curr[kk]
+			for kk in range(42, len(curr), 2):
+				curr[kk] = (curr[kk] - x_mean_r) / x_std_r if x_std_r != 0 else curr[kk]
+			for kk in range(43, len(curr), 2):
+				curr[kk] = (curr[kk] - y_mean_r) / y_std_r if y_std_r != 0 else curr[kk]
 			# processed_X.append([a for j,a in enumerate(x) if (j-2)%3!=0 ])
 			processed_X.append(curr)
 	processed_X = np.array(processed_X)
