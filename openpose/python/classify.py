@@ -34,14 +34,32 @@ def preprocess(X, Y):
 	processed_X, processed_Y = [], []
 	for i, x in enumerate(X):
 		if gestures[int(Y[i])] == 'no_gesture':
-			processed_X.append([a for j,a in enumerate(x) if (j-2)%3!=0])
+			curr = []
+			for j in range(0,len(x),3):
+				if x[j+2]>confidence_threshold:
+					curr.append(x[j])
+					curr.append(x[j+1])
+				else:
+					curr.append(0)
+					curr.append(0)
+			# processed_X.append([a for j,a in enumerate(x) if (j-2)%3!=0 ])
+			processed_X.append(curr)
 			processed_Y.append(Y[i])
 			continue
 		confidences = x[2::3]
 		if np.count_nonzero(confidences > confidence_threshold) > percent_points_confident * num_points:
 			# print(np.array([a for j,a in enumerate(x) if (j-2)%3!=0]).shape)
 			# print(np.array(x).shape)
-			processed_X.append([a for j,a in enumerate(x) if (j-2)%3!=0])
+			curr = []
+			for j in range(0, len(x), 3):
+				if x[j + 2] > confidence_threshold:
+					curr.append(x[j])
+					curr.append(x[j + 1])
+				else:
+					curr.append(0)
+					curr.append(0)
+			# processed_X.append([a for j,a in enumerate(x) if (j-2)%3!=0 ])
+			processed_X.append(curr)
 			# processed_X.append(x)
 			processed_Y.append(Y[i])
 	processed_X = np.array(processed_X)
@@ -65,6 +83,7 @@ def feature_selection(X,Y):
 						index_y_2 = (ii * 21) * 2 + 1
 						# print(index_x_1, index_x_2)
 						# print(index_y_1,index_y_2)
+						# print(len(x))
 						curr.append(x[index_x_1] - x[index_x_2])  # x
 						curr.append(x[index_y_1] - x[index_y_2])  # y
 					else:
@@ -78,8 +97,7 @@ def feature_selection(X,Y):
 						curr.append(x[index_y_1] - x[index_y_2])  # y
 
 		# manual feature selection
-		# curr = []
-		# distance btw finger tips to palm
+		# distance between finger tips to palm
 		curr.append((x[16] - x[10]) ** 2 + (x[17] - x[11]) ** 2)
 		curr.append((x[24] - x[18]) ** 2 + (x[25] - x[19]) ** 2)
 		curr.append((x[32] - x[26]) ** 2 + (x[33] - x[27]) ** 2)
@@ -90,12 +108,19 @@ def feature_selection(X,Y):
 		curr.append((x[42+32] - x[42+26]) ** 2 + (x[42+33] - x[42+27]) ** 2)
 		curr.append((x[42+40] - x[42+34]) ** 2 + (x[42+41] - x[42+35]) ** 2)
 
-		# distance btw thumb with index finger
+		# distance between thumb with index finger
 		curr.append((x[16]-x[8])**2+(x[17] - x[9])**2)
 		curr.append((x[14] - x[6]) ** 2 + (x[15] - x[7]) ** 2)
 
 		curr.append((x[42+16] - x[42+8]) ** 2 + (x[42+17] - x[42+9]) ** 2)
 		curr.append((x[42+14] - x[42+6]) ** 2 + (x[42+15] - x[42+7]) ** 2)
+
+		#distance between two hands
+		curr.append((x[42+8] - x[8]) ** 2 + (x[42+9] - x[9]) ** 2)
+		curr.append((x[42 + 16] - x[16]) ** 2 + (x[42 + 17] - x[17]) ** 2)
+		curr.append((x[42 + 24] - x[24]) ** 2 + (x[42 + 25] - x[25]) ** 2)
+		curr.append((x[42 + 32] - x[32]) ** 2 + (x[42 + 33] - x[33]) ** 2)
+		curr.append((x[42 + 40] - x[40]) ** 2 + (x[42 + 41] - x[41]) ** 2)
 
 		# highest point
 		curr.append(np.argmax(x[1::2]))

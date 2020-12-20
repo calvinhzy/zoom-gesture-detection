@@ -27,6 +27,7 @@ num_classes = len(gestures)
 
 confidence_threshold = 0.3
 num_points = 42
+feature_num = 183
 feature_per_point = 2
 percent_points_confident = 0.4
 
@@ -44,7 +45,17 @@ def preprocess(X):
 		confidences = x[2::3]
 		if np.count_nonzero(confidences > confidence_threshold) > percent_points_confident * num_points:
 			# processed_X.append(x)
-			processed_X.append([a for j,a in enumerate(x) if (j-2)%3!=0])
+			# processed_X.append([a for j,a in enumerate(x) if (j-2)%3!=0])
+			curr = []
+			for j in range(0, len(x), 3):
+				if x[j + 2] > confidence_threshold:
+					curr.append(x[j])
+					curr.append(x[j + 1])
+				else:
+					curr.append(0)
+					curr.append(0)
+			# processed_X.append([a for j,a in enumerate(x) if (j-2)%3!=0 ])
+			processed_X.append(curr)
 	processed_X = np.array(processed_X)
 	return processed_X
 
@@ -96,6 +107,13 @@ def feature_selection(X):
 		curr.append((x[42 + 16] - x[42 + 8]) ** 2 + (x[42 + 17] - x[42 + 9]) ** 2)
 		curr.append((x[42 + 14] - x[42 + 6]) ** 2 + (x[42 + 15] - x[42 + 7]) ** 2)
 
+		# distance between two hands
+		curr.append((x[42 + 8] - x[8]) ** 2 + (x[42 + 9] - x[9]) ** 2)
+		curr.append((x[42 + 16] - x[16]) ** 2 + (x[42 + 17] - x[17]) ** 2)
+		curr.append((x[42 + 24] - x[24]) ** 2 + (x[42 + 25] - x[25]) ** 2)
+		curr.append((x[42 + 32] - x[32]) ** 2 + (x[42 + 33] - x[33]) ** 2)
+		curr.append((x[42 + 40] - x[40]) ** 2 + (x[42 + 41] - x[41]) ** 2)
+
 		# highest point
 		curr.append(np.argmax(x[1::2]))
 		# lowest point
@@ -112,7 +130,7 @@ def predict(X):
     formatted_X = format_input(X)
     processed_X = preprocess(formatted_X)
     processed_X = feature_selection(processed_X)
-    print(processed_X.shape)
+    # print(processed_X.shape)
     if (len(processed_X)==0):
 	    print('no_gesture')
     else:
@@ -124,8 +142,8 @@ class Model(nn.Module):
 
 	def __init__(self):
 		super(Model, self).__init__()
-		self.linear1 = nn.Linear(num_points*feature_per_point, 200)
-		self.linear2 = nn.Linear(200, 100)
+		self.linear1 = nn.Linear(feature_num, 300)
+		self.linear2 = nn.Linear(300, 100)
 		self.linear3 = nn.Linear(100, num_classes)
 		self.relu = torch.nn.ReLU()
 
@@ -151,6 +169,8 @@ model.to(device)
 def predictWithDeepLearning(X):
 	formatted_X = format_input(X)
 	processed_X = preprocess(formatted_X)
+	processed_X = feature_selection(processed_X)
+	print(processed_X.shape)
 	if (len(processed_X) == 0):
 		print('no_gesture')
 	else:
@@ -216,7 +236,7 @@ try:
 
 	# Read image and face rectangle locations
 	imageToProcess = cv2.imread(args[0].image_path)
-	print(imageToProcess.shape)
+	# print(imageToProcess.shape)
 	handRectangles = [
 		# Left/Right hands person 0
 		[op.Rectangle(160, 160, 480, 480), op.Rectangle(0., 160., 480, 480)]
@@ -265,7 +285,7 @@ try:
 			capturing = True
 			# SPACE pressed
 			#         # Create new datum
-		# if capturing:
+		if capturing:
 			datum = op.Datum()
 			datum.cvInputData = frame
 			datum.handRectangles = handRectangles
